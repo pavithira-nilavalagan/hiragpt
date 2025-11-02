@@ -1,15 +1,17 @@
 import { request, response } from "express";
 import Stripe from "stripe";
 import Transaction from "../models/Transaction.js";
+import User from "../models/User.js";
 
 export const stripeWebhooks = async (request, response) => {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+  const rawBody = request.rawBody || request.body;
   const sig = request.headers["stripe-signature"]
 
   let event;
 
   try {
-    event = stripe.webhooks.constructEvent(request.body, sig, process.env.STRIPE_WEBHOOK_SECRET)
+    event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET)
   } catch (error) {
       return response.status(400).send(`Webhook Error : ${error.message}`)
   }
@@ -20,20 +22,30 @@ export const stripeWebhooks = async (request, response) => {
         const paymentIntent = event.data.object;
         const sessionList = await stripe.checkout.sessions.list({
           payment_intent: paymentIntent.id,
+          limit: 1
 
-        })
+        });
+
+        if(sessionList.data.length === 0){
+          return response.json({received: true, message: "No session found for Payment Indent"})
+        }
 
         const session = sessionList.data[0];
         const {transactionId, appId} = session.metadata;
 
         if(appId === 'hiragpt'){
-          const transaction = await Transaction.findOne({_id: transactionId, isPaid: false})
+          const transaction = await Transaction.findOne({_id: transactionId, isPaid: false});
+
+          if(!transaction){
+            return response.json({received: true, message: "Transaction already paid or invalid"});
+          }
 
           // Update credits in user account
-          await User.updateOne({_id: transaction.userId}, {$inc: {credits: transaction.credits}})
+          await User.updateOne({_id: transaction.userId}, {$inc: {credits: transaction.credits}});
 
           // Update credit Payment status
           transaction.isPaid = true;
+          transaction.updatedAt = new Date();
           await transaction.save();
 
         } else {

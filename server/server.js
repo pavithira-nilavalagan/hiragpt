@@ -15,7 +15,7 @@ await connectDB()
 
 // Stripe Webhooks
 
-app.post('/api/stripe', express.raw({type: 'application/json'}), stripeWebhooks)
+app.post('/api/stripe', express.raw({type: 'application/json', limit: '10mb'}), stripeWebhooks)
 
 // Middleware
 
