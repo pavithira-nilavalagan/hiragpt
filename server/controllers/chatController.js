@@ -15,9 +15,9 @@ export const createChat = async (req, res) => {
     }
 
     await Chat.create(chatData)
-    res.json({sucess: true, message: "Chat Created"})
+    res.json({success: true, message: "Chat Created"})
   } catch (error) {
-    res.json({sucess: false, message: error.message});
+    res.json({success: false, message: error.message});
   }
 }
 
@@ -29,9 +29,9 @@ export const getChats = async (req, res) => {
     const chats = await Chat.find({userId}).sort({updatedAt: -1})
 
 
-    res.json({sucess: true, chats})
+    res.json({success: true, chats})
   } catch (error) {
-    res.json({sucess: false, message: error.message});
+    res.json({success: false, message: error.message});
   }
 }
 
@@ -39,13 +39,12 @@ export const getChats = async (req, res) => {
 
 export const deleteChat = async (req, res) => {
   try {
-    const userId = req.user._id
-    const {chatId} = req.body
+    const {chatId} = req.params
 
-    await Chat.deleteOne({_id: chatId, userId})
+    await Chat.findByIdAndDelete(chatId)
 
-    res.json({sucess: true, message: "Chat Deleted"})
+    res.json({success: true, message: "Chat Deleted"})
   } catch (error) {
-    res.json({sucess: false, message: error.message});
+    res.json({success: false, message: error.message});
   }
 }
